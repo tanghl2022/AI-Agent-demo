@@ -58,7 +58,7 @@ def create_query_location_node(
 
         result = (
             await inventory_query_client
-            .query_location(
+            .query_locations(
                 material_code
             )
         )
@@ -90,11 +90,26 @@ def create_query_location_node(
                         duration_ms
                 }
             )
-        answer = (
-            f"物料 {result.material_code}："
-            f"物料 {result.location}。"
+        if result.locations:
 
-        )
+            location_text = "、".join(
+                [
+                    f"{item.location_code}（数量：{item.quantity}）"
+                    for item in result.locations
+                ]
+            )
+
+            answer = (
+                f"物料 {result.material_code} 当前库位："
+                f"{location_text}"
+            )
+
+        else:
+
+            answer = (
+                f"物料 {result.material_code} "
+                f"当前未查询到库位信息。"
+            )
 
         return {
             "status":

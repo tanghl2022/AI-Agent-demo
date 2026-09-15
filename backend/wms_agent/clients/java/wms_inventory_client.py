@@ -43,7 +43,11 @@ class WmsInventoryClient:
         )
 
         async with httpx.AsyncClient(
-                timeout=self.timeout
+                timeout=self.timeout,
+        # WMS API 是受控的内部业务服务。
+        # 禁止 httpx 自动继承操作系统/环境中的 HTTP 代理配置，
+        # 避免 localhost / 内网 WMS 请求被代理转发。
+                trust_env=False
         ) as client:
             response = await client.get(
                 url

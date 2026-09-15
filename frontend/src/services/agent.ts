@@ -4,7 +4,7 @@ import { SseParser } from '../utils/sseParser'
 export interface ChatStreamRequest { message: string; threadId: string }
 
 export async function streamAgentChat(request: ChatStreamRequest, onEvent: (event: AgentEvent) => void): Promise<void> {
-  const response = await fetch('/api/agent/chat/unified-stream', {
+  const response = await fetch('/api/agent/chat/stream', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(request)

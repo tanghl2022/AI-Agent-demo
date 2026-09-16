@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from wms_agent.graphs.freeze_inventory_workflow import (
+from wms_agent.apps.warehouse.workflows.freeze_inventory.graph import (
     build_approval_result,
     route_after_approval,
 )

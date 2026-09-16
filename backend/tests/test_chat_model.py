@@ -1,4 +1,4 @@
-from wms_agent.models.chat_model import ChatRequest
+from wms_agent.apps.warehouse.api.dto.chat import ChatRequest
 
 
 def test_chat_request_accepts_frontend_alias():

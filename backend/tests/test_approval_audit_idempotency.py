@@ -1,6 +1,6 @@
 import pytest
 
-from wms_agent.audit.approval_audit import ApprovalAudit
+from wms_agent.apps.warehouse.audit.approval_audit import ApprovalAudit
 
 
 def test_same_workflow_should_have_same_audit_business_key():

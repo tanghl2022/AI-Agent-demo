@@ -1,14 +1,14 @@
-from wms_agent.models.wms_query_result import (
+from wms_agent.apps.warehouse.models.query import (
     StockQueryResult,
     LocationQueryResult,
     LocationQueryItem,
 )
 
-from wms_agent.nodes.query.query_stock_node import (
+from wms_agent.apps.warehouse.agent.nodes.query.query_stock_node import (
     create_query_stock_node,
 )
 
-from wms_agent.nodes.query.query_location_node import (
+from wms_agent.apps.warehouse.agent.nodes.query.query_location_node import (
     create_query_location_node,
 )
 

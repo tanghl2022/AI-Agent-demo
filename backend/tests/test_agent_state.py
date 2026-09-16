@@ -1,4 +1,4 @@
-from wms_agent.models.agent_state import AgentState
+from wms_agent.apps.warehouse.agent.models.agent_state import AgentState
 
 
 def test_should_create_agent_state():

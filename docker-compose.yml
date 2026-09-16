@@ -5,6 +5,10 @@ services:
       LLM_BASE_URL: ${LLM_BASE_URL:-https://api.openai.com/v1}
       LLM_API_KEY: ${LLM_API_KEY:-}
       LLM_MODEL: ${LLM_MODEL:-gpt-4o-mini}
+      CHECKPOINT_DB_URI: ${CHECKPOINT_DB_URI:-}
+      AUDIT_DB_URI: ${AUDIT_DB_URI:-}
+      WMS_SERVICE_BASE_URL: ${WMS_SERVICE_BASE_URL:-http://host.docker.internal:8080}
+      WMS_SERVICE_TIMEOUT: ${WMS_SERVICE_TIMEOUT:-10}
       CORS_ORIGINS: http://localhost:5173,http://localhost:8080
     ports:
       - "8000:8000"

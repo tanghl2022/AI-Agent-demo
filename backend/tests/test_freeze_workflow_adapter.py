@@ -1,4 +1,4 @@
-from wms_agent.nodes.workflow.freeze_workflow_adapter import (
+from wms_agent.apps.warehouse.agent.nodes.workflow.freeze_workflow_adapter import (
     create_freeze_workflow_adapter,
 )
 
@@ -25,37 +25,11 @@ class FakeFreezeWorkflow:
         self.received_input = None
         self.received_config = None
 
-    async def ainvoke(
-        self,
-        input_data,
-        config,
-    ):
-        """
-        模拟Freeze Workflow启动后的结果。
-
-        正式Workflow在approval节点会interrupt，
-        这里用WAITING_APPROVAL模拟暂停后的业务状态。
-        """
-
-        self.received_input = input_data
-        self.received_config = config
-
-        return {
-            "thread_id":
-                input_data["thread_id"],
-
-            "material_code":
-                input_data["material_code"],
-
-            "quantity":
-                input_data["quantity"],
-
-            "status":
-                "WAITING_APPROVAL",
-
-            "approval_available_qty":
-                90,
-        }
+    async def start(self, *, thread_id, material_code, quantity):
+        """替换应用服务边界，节点不应再依赖图的调用协议。"""
+        self.received_input = {"thread_id": thread_id, "material_code": material_code, "quantity": quantity}
+        self.received_config = {"configurable": {"thread_id": thread_id}}
+        return {"threadId": thread_id, "status": "WAITING_APPROVAL", "availableQty": 90}
 
 
 async def test_should_start_freeze_workflow():

@@ -1,8 +1,8 @@
-from wms_agent.models.agent_intent import (
+from wms_agent.apps.warehouse.agent.models.agent_intent import (
     IntentResult,
     IntentType,
 )
-from wms_agent.nodes.agent.intent_recognition_node import (
+from wms_agent.apps.warehouse.agent.nodes.agent.intent_recognition_node import (
     create_intent_recognition_node,
 )
 

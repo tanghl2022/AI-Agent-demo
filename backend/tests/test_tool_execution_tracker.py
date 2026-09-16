@@ -1,4 +1,4 @@
-from wms_agent.services.tool_execution_tracker import ToolExecutionTracker
+from wms_agent.apps.warehouse.agent.tool_execution_tracker import ToolExecutionTracker
 
 
 def test_parallel_runs_have_independent_duration():

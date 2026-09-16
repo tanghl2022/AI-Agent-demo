@@ -1,4 +1,4 @@
-from wms_agent.services.token_buffer import TokenBuffer
+from wms_agent.apps.warehouse.agent.token_buffer import TokenBuffer
 
 
 def test_flush_by_size():

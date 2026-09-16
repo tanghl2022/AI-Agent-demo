@@ -6,7 +6,7 @@
 
 ```python
 from wms_agent.application import create_app
-from wms_agent.clients.mock.mock_wms_client import MockWmsClient
+from wms_agent.apps.wms.clients import MockWmsClient
 
 # 同一实例保证查询和模拟冻结看到一致的数据。
 client = MockWmsClient()

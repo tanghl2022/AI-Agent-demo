@@ -1,5 +1,6 @@
 import asyncio
 import selectors
+import sys
 
 import uvicorn
 
@@ -31,8 +32,6 @@ async def main():
 
 
 if __name__ == "__main__":
-    # Python 3.13 支持 loop_factory
-    asyncio.run(
-        main(),
-        loop_factory=selector_loop_factory,
-    )
+    # Runner 从 Python 3.11 起支持 loop_factory，仅 Windows 需要显式选择。
+    with asyncio.Runner(loop_factory=selector_loop_factory if sys.platform == "win32" else None) as runner:
+        runner.run(main())

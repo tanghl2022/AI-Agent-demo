@@ -1,5 +1,5 @@
-from wms_agent.models.agent_event import AgentEventType
-from wms_agent.services.agent_event_factory import AgentEventFactory
+from wms_agent.apps.warehouse.agent.models.agent_event import AgentEventType
+from wms_agent.apps.warehouse.agent.agent_event_factory import AgentEventFactory
 
 
 def test_event_sequence_increments():

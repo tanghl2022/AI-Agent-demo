@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from wms_agent.models.agent_intent import (
+from wms_agent.apps.warehouse.agent.models.agent_intent import (
     IntentResult,
     IntentType,
 )

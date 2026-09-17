@@ -47,7 +47,7 @@ class Model:
         return self
 
     async def ainvoke(self, messages):
-        from wms_agent.apps.warehouse.agent.models.agent_intent import IntentResult
+        from wms_agent.apps.warehouse.agent.state.agent_intent import IntentResult
         return IntentResult(intent="QUERY_STOCK", confidence=1.0, material_code="MAT001")
 
 
@@ -62,7 +62,7 @@ def make_warehouse(model=None):
 
 @pytest.mark.asyncio
 async def test_new_chat_request_starts_a_separate_business_workflow():
-    from wms_agent.apps.warehouse.agent.models.agent_intent import IntentResult
+    from wms_agent.apps.warehouse.agent.state.agent_intent import IntentResult
 
     class FreezeModel(Model):
         async def ainvoke(self, messages):
@@ -110,7 +110,7 @@ async def test_duplicate_workflow_keeps_original_request_and_completed_result():
 
 @pytest.mark.asyncio
 async def test_adapter_reports_rejection_instead_of_claiming_waiting():
-    from wms_agent.apps.warehouse.agent.nodes.workflow.freeze_workflow_adapter import create_freeze_workflow_adapter
+    from wms_agent.apps.warehouse.agent.capabilities.freeze_workflow import create_freeze_workflow_adapter
     warehouse, inventory, _ = make_warehouse()
     node = create_freeze_workflow_adapter(warehouse.freeze_workflow_service)
     result = await node({"material_code": "MAT001", "quantity": 101})

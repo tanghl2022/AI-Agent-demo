@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+import logging
 from typing import Callable
 from typing_extensions import TypedDict
 
@@ -11,6 +12,9 @@ from langgraph.graph import (
 from langgraph.types import interrupt
 
 from wms_agent.apps.warehouse.models.query import StockQueryResult
+
+
+logger = logging.getLogger(__name__)
 
 
 # ============================================================
@@ -431,7 +435,7 @@ def create_audit_approval_node(
             )
         )
 
-        print(
+        logger.info(
             "[APPROVAL AUDIT] "
             f"thread_id={state['thread_id']}, "
             f"inserted={inserted}"

@@ -5,7 +5,7 @@ from wms_agent.apps.warehouse.agent.events.event_context import (
 from wms_agent.apps.warehouse.agent.events.event_types import (
     AgentEventType
 )
-from wms_agent.apps.warehouse.agent.nodes.agent.agent_router import route_agent_request
+from wms_agent.apps.warehouse.agent.graph.routers import route_agent_request
 
 
 async def route_event_node(

@@ -3,7 +3,7 @@ import json
 import httpx
 from langchain_openai import ChatOpenAI
 
-from wms_agent.apps.warehouse.agent.nodes.agent.intent_recognition_node import create_intent_recognition_node
+from wms_agent.apps.warehouse.agent.nodes.agent.intent_recognition import create_intent_recognition_node
 
 
 async def test_deepseek_intent_request_disables_thinking():

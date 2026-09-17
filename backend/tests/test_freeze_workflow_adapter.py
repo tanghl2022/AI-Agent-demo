@@ -1,4 +1,4 @@
-from wms_agent.apps.warehouse.agent.nodes.workflow.freeze_workflow_adapter import (
+from wms_agent.apps.warehouse.agent.capabilities.freeze_workflow import (
     create_freeze_workflow_adapter,
 )
 

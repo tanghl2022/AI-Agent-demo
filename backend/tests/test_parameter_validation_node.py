@@ -1,4 +1,4 @@
-from wms_agent.apps.warehouse.agent.nodes.agent.parameter_validation_node import (
+from wms_agent.apps.warehouse.agent.nodes.agent.parameter_validation import (
     validate_agent_parameters,
 )
 

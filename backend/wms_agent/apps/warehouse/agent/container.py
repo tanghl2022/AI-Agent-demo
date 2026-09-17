@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from typing import Any
-from .graphs.agent_main_graph_factory import build_agent_main_graph
+from .graph.agent_main_graph_factory import build_agent_main_graph
 from .service import AgentService
 from wms_agent.apps.warehouse.services.wms_query_service import WmsQueryService
 from wms_agent.apps.warehouse.workflows.freeze_inventory.service import FreezeWorkflowService

@@ -43,6 +43,14 @@ class AgentService:
 
             "user_message":
                 message.strip(),
+
+            # 每一轮请求都重新决定是否创建业务流程。
+            # 不能从会话 Checkpoint 继承上一次已经结束或等待审批的实例。
+            "workflow_instance_id":
+                None,
+
+            "active_workflow":
+                None,
         }
 
         config = {

@@ -2,11 +2,11 @@ from typing import Any
 
 from wms_agent.apps.warehouse.agent.events.event_context import get_event_publisher
 from wms_agent.apps.warehouse.agent.events.event_types import AgentEventType
-from wms_agent.apps.warehouse.agent.models.agent_intent import (
+from wms_agent.apps.warehouse.agent.state.agent_intent import (
     IntentResult,
 )
 
-from wms_agent.apps.warehouse.agent.models.agent_state import (
+from wms_agent.apps.warehouse.agent.state.agent_state import (
     AgentState,
 )
 
@@ -75,10 +75,22 @@ quantity = 30
 def create_intent_recognition_node(
     chat_model: Any,
 ):
-    publisher = get_event_publisher()
+    intent_model = chat_model
+
+    # 部分 OpenAI 兼容模型会在开启 thinking 时拒绝工具调用。
+    # ChatOpenAI 是 Pydantic 模型，复制配置可避免污染其他节点共享的实例。
+    if hasattr(chat_model, "model_copy"):
+        extra_body = dict(getattr(chat_model, "extra_body", None) or {})
+        extra_body["thinking"] = {"type": "disabled"}
+        intent_model = chat_model.model_copy(
+            update={
+                "extra_body": extra_body,
+                "reasoning_effort": None,
+            }
+        )
 
     structured_model = (
-        chat_model
+        intent_model
         .with_structured_output(
             IntentResult,
             # 使用工具调用返回结构化结果，避免发送不受支持的 json_schema。

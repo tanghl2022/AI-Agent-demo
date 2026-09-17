@@ -1,6 +1,10 @@
 from dataclasses import dataclass
+import logging
 
 from wms_agent.apps.warehouse.ports.inventory import InventoryPort as WmsInventoryClient
+
+
+logger = logging.getLogger(__name__)
 
 
 def build_freeze_idempotency_key(
@@ -87,7 +91,7 @@ class FreezeExecutionService:
             )
         )
 
-        print(
+        logger.info(
             "[AGENT CALL WMS FREEZE] "
             f"key={idempotency_key}, "
             f"material={material_code}, "
@@ -108,7 +112,7 @@ class FreezeExecutionService:
             )
         )
 
-        print(
+        logger.info(
             "[WMS FREEZE RESULT] "
             f"success={result.success}, "
             f"executed={result.executed}, "

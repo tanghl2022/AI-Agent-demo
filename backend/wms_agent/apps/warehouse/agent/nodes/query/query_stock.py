@@ -1,5 +1,6 @@
 import time
 
+from wms_agent.apps.warehouse.agent.capabilities import StockQueryCapability
 from wms_agent.apps.warehouse.agent.events.event_context import (
     get_event_publisher
 )
@@ -9,11 +10,11 @@ from wms_agent.apps.warehouse.agent.events.event_types import (
 )
 
 
-def create_query_location_node(
-    wms_query_service
+def create_query_stock_node(
+    capability: StockQueryCapability,
 ):
 
-    async def query_location_node(
+    async def query_stock_node(
         state
     ):
 
@@ -40,13 +41,15 @@ def create_query_location_node(
         # ====================================
 
         if publisher:
+
             await publisher.publish(
                 AgentEventType.TOOL_START,
-                node="query_location",
+                node="query_stock",
                 status="RUNNING",
                 data={
                     "tool":
-                        "query_location",
+                        "query_stock",
+
                     "materialCode":
                         material_code
                 }
@@ -56,10 +59,8 @@ def create_query_location_node(
             time.perf_counter()
         )
 
-        result = (await wms_query_service
-            .query_locations(
-                material_code
-            )
+        result = (
+            await capability.execute(material_code)
         )
 
         duration_ms = int(
@@ -76,39 +77,42 @@ def create_query_location_node(
         # ====================================
 
         if publisher:
+
             await publisher.publish(
                 AgentEventType.TOOL_END,
-                node="query_location",
+                node="query_stock",
                 status="SUCCESS",
                 data={
                     "tool":
-                        "query_location",
+                        "query_stock",
+
                     "materialCode":
                         material_code,
+
                     "durationMs":
-                        duration_ms
+                        duration_ms,
+
+                    "totalQty":
+                        result.total_qty,
+
+                    "reservedQty":
+                        result.reserved_qty,
+
+                    "frozenQty":
+                        result.frozen_qty,
+
+                    "availableQty":
+                        result.available_qty
                 }
             )
-        if result.locations:
 
-            location_text = "、".join(
-                [
-                    f"{item.location_code}（数量：{item.quantity}）"
-                    for item in result.locations
-                ]
-            )
-
-            answer = (
-                f"物料 {result.material_code} 当前库位："
-                f"{location_text}"
-            )
-
-        else:
-
-            answer = (
-                f"物料 {result.material_code} "
-                f"当前未查询到库位信息。"
-            )
+        answer = (
+            f"物料 {result.material_code}："
+            f"总库存 {result.total_qty}，"
+            f"预占 {result.reserved_qty}，"
+            f"冻结 {result.frozen_qty}，"
+            f"可用库存 {result.available_qty}。"
+        )
 
         return {
             "status":
@@ -121,4 +125,4 @@ def create_query_location_node(
                 None
         }
 
-    return query_location_node
+    return query_stock_node

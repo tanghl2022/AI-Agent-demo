@@ -4,11 +4,11 @@ from wms_agent.apps.warehouse.models.query import (
     LocationQueryItem,
 )
 
-from wms_agent.apps.warehouse.agent.nodes.query.query_stock_node import (
+from wms_agent.apps.warehouse.agent.capabilities.stock_query import (
     create_query_stock_node,
 )
 
-from wms_agent.apps.warehouse.agent.nodes.query.query_location_node import (
+from wms_agent.apps.warehouse.agent.capabilities.location_query import (
     create_query_location_node,
 )
 

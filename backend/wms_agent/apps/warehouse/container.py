@@ -20,6 +20,7 @@ class WarehouseContainer:
 
 def create_warehouse_container(*, inventory_client: InventoryPort, location_client: LocationPort,
     chat_model: Any, checkpointer: Any, audit_service: ApprovalAuditService) -> WarehouseContainer:
+
     query_service = WmsQueryService(inventory_client, location_client)
     execution_service = FreezeExecutionService(inventory_client)
     workflows = create_workflow_container(query_service=query_service,

@@ -1,7 +1,4 @@
 from typing import Any
-from wms_agent.apps.warehouse.agent.graph.builder import (
-    create_agent_main_graph,
-)
 
 from wms_agent.apps.warehouse.agent.nodes.agent.intent_recognition import (
     create_intent_recognition_node,
@@ -14,13 +11,6 @@ from wms_agent.apps.warehouse.agent.nodes.agent.route_event import (
     route_event_node
 )
 
-from wms_agent.apps.warehouse.agent.capabilities.stock_query import (
-    create_query_stock_node,
-)
-
-from wms_agent.apps.warehouse.agent.capabilities.location_query import (
-    create_query_location_node,
-)
 
 from wms_agent.apps.warehouse.agent.capabilities.freeze_workflow import (
     create_freeze_workflow_adapter,
@@ -44,6 +34,8 @@ from langgraph.graph import (
     END,
 )
 
+from wms_agent.apps.warehouse.agent.nodes.query.query_location import create_query_location_node
+from wms_agent.apps.warehouse.agent.nodes.query.query_stock import create_query_stock_node
 from wms_agent.apps.warehouse.agent.state.agent_state import (
     AgentState,
 )
@@ -56,7 +48,8 @@ from wms_agent.apps.warehouse.agent.graph.routers import (
 def build_agent_main_graph(
     *,
     chat_model,
-    query_service,
+    stock_query_capability,
+    location_query_capability,
     freeze_workflow_service,
     checkpointer,
 ):
@@ -83,7 +76,7 @@ def build_agent_main_graph(
 
     stock_node = (
         create_query_stock_node(
-            query_service
+            stock_query_capability
         )
     )
 
@@ -93,7 +86,7 @@ def build_agent_main_graph(
 
     location_node = (
         create_query_location_node(
-            query_service
+            location_query_capability
         )
     )
 

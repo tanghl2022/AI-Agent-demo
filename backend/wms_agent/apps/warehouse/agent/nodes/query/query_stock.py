@@ -1,6 +1,6 @@
 import time
 
-from wms_agent.apps.warehouse.agent.capabilities import StockQueryCapability
+from wms_agent.apps.warehouse.agent.capabilities.stock_query import StockQueryCapability
 from wms_agent.apps.warehouse.agent.events.event_context import (
     get_event_publisher
 )

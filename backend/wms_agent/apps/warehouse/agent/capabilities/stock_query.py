@@ -4,7 +4,7 @@ from wms_agent.apps.warehouse.services.wms_query_service import WmsQueryService
 
 class StockQueryCapability:
     """
-    库位查询能力。
+    库存查询能力。
     """
 
     def __init__(self, query_service:WmsQueryService):

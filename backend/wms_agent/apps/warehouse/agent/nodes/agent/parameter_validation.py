@@ -193,6 +193,10 @@ def _do_validate(
 
         return _success()
 
+
+    if intent == "INVENTORY_ANALYSIS":
+        return _success()
+
     return {
         "status":
             "UNKNOWN",

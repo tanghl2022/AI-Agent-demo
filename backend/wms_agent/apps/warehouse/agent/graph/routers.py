@@ -11,6 +11,8 @@ ROUTE_QUERY_LOCATION = "query_location"
 
 ROUTE_FREEZE_INVENTORY = "freeze_inventory"
 
+ROUTE_INVENTORY_ANALYSIS = "inventory_analysis"
+
 ROUTE_CLARIFICATION = "clarification"
 
 ROUTE_UNKNOWN = "unknown"
@@ -99,6 +101,9 @@ def route_agent_request(
 
     if intent == "FREEZE_INVENTORY":
         return ROUTE_FREEZE_INVENTORY
+
+    if intent == "INVENTORY_ANALYSIS":
+        return ROUTE_INVENTORY_ANALYSIS
 
     # ========================================================
     # 7. 最终兜底

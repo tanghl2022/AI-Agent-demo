@@ -9,11 +9,13 @@ from .service import AgentService
 from wms_agent.apps.warehouse.services.wms_query_service import WmsQueryService
 from wms_agent.apps.warehouse.workflows.freeze_inventory.service import FreezeWorkflowService
 from .tools.wms_tools import create_wms_tools
+from ..subagents.inventory_analysis.agent import InventoryAnalysisSubAgent
 
 
 @dataclass(frozen=True, slots=True)
 class AgentContainer:
     agent_service: AgentService
+    inventory_analysis_subagent: InventoryAnalysisSubAgent
 
 
 def create_agent_container(
@@ -44,6 +46,10 @@ def create_agent_container(
         location_query_capability=location_query_capability,
     )
 
+    inventory_analysis_subagent = InventoryAnalysisSubAgent(
+        chat_model=chat_model,
+        tools=wms_tools,
+    )
 
     # ② Capability 注入 Graph
     graph = build_agent_main_graph(
@@ -51,6 +57,7 @@ def create_agent_container(
         stock_query_capability=stock_query_capability,
         location_query_capability=location_query_capability,
         freeze_workflow_service=freeze_workflow_service,
+        inventory_analysis_subagent=inventory_analysis_subagent,
         checkpointer=checkpointer,
     )
 
@@ -59,5 +66,6 @@ def create_agent_container(
 
     # ④ 最终包装成 AgentContainer
     return AgentContainer(
-        agent_service=agent_service
+        agent_service=agent_service,
+        inventory_analysis_subagent = inventory_analysis_subagent
     )

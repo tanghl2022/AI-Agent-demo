@@ -13,6 +13,8 @@ class IntentType(str, Enum):
 
     UNKNOWN = "UNKNOWN"
 
+    INVENTORY_ANALYSIS = "INVENTORY_ANALYSIS"
+
 
 class IntentResult(BaseModel):
     """

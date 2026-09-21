@@ -10,9 +10,12 @@ def create_app(settings: Settings | None = None, *, runtime_factory: RuntimeFact
     settings = settings if settings is not None else load_settings()
     app = FastAPI(title="Warehouse Agent", version="1.0.0",
                   lifespan=create_lifespan(settings, runtime_factory))
+
     app.add_middleware(CORSMiddleware, allow_origins=list(settings.cors_origins),
                        allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
+
     app.include_router(router)
+
     return app
 
 

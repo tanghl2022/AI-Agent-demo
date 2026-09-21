@@ -3,6 +3,7 @@ from typing import Any
 from wms_agent.apps.warehouse.agent.nodes.agent.intent_recognition import (
     create_intent_recognition_node,
 )
+from wms_agent.apps.warehouse.agent.nodes.agent.inventory_analysis import InventoryAnalysisNode
 
 from wms_agent.apps.warehouse.agent.nodes.agent.parameter_validation import (
     validate_agent_parameters,
@@ -51,6 +52,7 @@ def build_agent_main_graph(
     stock_query_capability,
     location_query_capability,
     freeze_workflow_service,
+    inventory_analysis_subagent,
     checkpointer,
 ):
     """
@@ -100,6 +102,10 @@ def build_agent_main_graph(
         )
     )
 
+    inventory_analysis_node = InventoryAnalysisNode(
+        subagent=inventory_analysis_subagent,
+    )
+
     # ========================================================
     # 5. Main Graph
     # ========================================================
@@ -114,6 +120,9 @@ def build_agent_main_graph(
 
         validate_parameters_node=
         validate_agent_parameters,
+
+        inventory_analysis_node=
+        inventory_analysis_node,
 
         route_event_node=
         route_event_node,
@@ -134,7 +143,8 @@ def build_agent_main_graph(
         unknown_node,
 
         checkpointer=
-        checkpointer,
+        checkpointer
+
     )
 
 
@@ -149,7 +159,7 @@ def create_agent_main_graph(
     clarification_node: Any,
     unknown_node: Any,
     checkpointer=None,
-):
+    inventory_analysis_node=Any):
 
     builder = StateGraph(
         AgentState
@@ -194,6 +204,11 @@ def create_agent_main_graph(
     )
 
     builder.add_node(
+        "inventory_analysis",
+        inventory_analysis_node,
+    )
+
+    builder.add_node(
         "unknown",
         unknown_node,
     )
@@ -231,6 +246,9 @@ def create_agent_main_graph(
             "freeze_inventory":
                 "freeze_inventory",
 
+            "inventory_analysis":
+                "inventory_analysis",
+
             "clarification":
                 "clarification",
 
@@ -253,7 +271,10 @@ def create_agent_main_graph(
         "freeze_inventory",
         END,
     )
-
+    builder.add_edge(
+        "inventory_analysis",
+        END
+    )
     builder.add_edge(
         "clarification",
         END,

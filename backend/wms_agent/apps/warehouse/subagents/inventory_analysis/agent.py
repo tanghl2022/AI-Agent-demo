@@ -116,12 +116,7 @@ class InventoryAnalysisSubAgent:
             # -------------------------------------------------
 
             for tool_call in response.tool_calls:
-                logger.info(
-                    "[InventoryAnalysisSubAgent] "
-                    "Tool Start: name=%s args=%s",
-                    tool_name,
-                    tool_args,
-                )
+
                 tool_name = tool_call["name"]
 
                 tool_args = tool_call["args"]
@@ -131,7 +126,12 @@ class InventoryAnalysisSubAgent:
                 tool = self._tool_map.get(
                     tool_name
                 )
-
+                logger.info(
+                    "[InventoryAnalysisSubAgent] "
+                    "Tool Start: name=%s args=%s",
+                    tool_name,
+                    tool_args,
+                )
                 # ---------------------------------------------
                 # Tool 不存在
                 # ---------------------------------------------

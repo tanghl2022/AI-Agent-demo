@@ -1,5 +1,15 @@
 # 后端架构与运行
 
+## MCP 库存分析
+
+库存分析子 Agent 支持 `INVENTORY_TOOL_SOURCE=local|mcp`，默认 local。
+MCP 模式在启动时发现两个只读 WMS 工具，以 Streamable HTTP 查询真实业务 API。
+固定查询节点和冻结工作流保持原 HTTP 调用。配置、启动、接口契约和边界见 [MCP Server 说明](../mcp-server/README.md)。
+
+分析结果附查询证据清单，工具调用通过现有 SSE `tool_start/tool_end` 展示，每次调用有独立 `toolCallId`。
+无有效证据返回 `INSUFFICIENT_EVIDENCE`；部分查询失败返回 `PARTIAL`；模型失败返回 `SYSTEM_FAILED`。
+分析证据保存在本轮 checkpoint 的 `analysis_evidence` 中，新一轮会清空，避免复用过期库存。
+
 业务应用和外部系统分开组织：`apps/warehouse` 拥有仓储规则、Agent、审批流程及 HTTP 接口；`integrations/wms` 负责 WMS HTTP 通信；`infrastructure` 管理模型、审计连接池和 checkpoint。
 
 ## 从哪里开始阅读

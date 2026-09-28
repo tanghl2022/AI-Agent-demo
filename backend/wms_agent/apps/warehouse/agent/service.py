@@ -35,6 +35,7 @@ class AgentService:
         )
 
         initial_state = {
+            "analysis_evidence": [],
             "conversation_id":
                 conversation_id,
 

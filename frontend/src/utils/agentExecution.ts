@@ -317,6 +317,7 @@ function handleToolStart(
     toolName: data.toolName,
 
     toolArgs: data.args,
+    toolCallId: data.toolCallId,
 
     rawData: event.data
   })
@@ -339,7 +340,8 @@ function handleToolEnd(
    */
   const item = findRunningTool(
       items,
-      data.toolName
+      data.toolName,
+      data.toolCallId
   )
 
 
@@ -379,6 +381,7 @@ function handleToolEnd(
       toolName: data.toolName,
 
       toolResult: getToolResult(data),
+      toolCallId: data.toolCallId,
 
       rawData: event.data
     })
@@ -734,7 +737,8 @@ function findLatestWaitingItem(
  */
 function findRunningTool(
     items: AgentExecutionItem[],
-    toolName?: string
+    toolName?: string,
+    toolCallId?: string
 ): AgentExecutionItem | undefined {
 
   return [...items]
@@ -752,6 +756,9 @@ function findRunningTool(
          * 如果后端没有 toolName，
          * 就取最近运行中的 Tool。
          */
+        if (toolCallId) {
+          return item.toolCallId === toolCallId
+        }
         if (!toolName) {
           return true
         }
@@ -887,6 +894,10 @@ function getToolTitle(
 ): string {
 
   switch (toolName) {
+    case 'wms_query_stock':
+      return '库存查询（MCP）'
+    case 'wms_query_locations':
+      return '库位查询（MCP）'
 
     case 'query_stock':
       return '库存查询'
@@ -917,6 +928,8 @@ function normalizeDoneStatus(
       return 'SUCCESS'
 
     case 'WAITING_APPROVAL':
+    case 'INSUFFICIENT_EVIDENCE':
+    case 'PARTIAL':
     case 'CLARIFICATION_REQUIRED':
       return 'WAITING'
 
@@ -959,7 +972,7 @@ function buildToolItemId(
 
   return (
       `${event.requestId}-tool-` +
-      `${toolName ?? event.sequence}`
+      `${(event.data as ToolStartEventData).toolCallId ?? `${toolName ?? 'tool'}-${event.sequence}`}`
   )
 }
 

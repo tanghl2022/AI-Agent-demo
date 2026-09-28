@@ -298,6 +298,7 @@ export interface RouteEventData {
  * tool_start 的 data。
  */
 export interface ToolStartEventData {
+  toolCallId?: string
 
   /**
    * Tool 名称。
@@ -326,6 +327,7 @@ export interface ToolStartEventData {
  * tool_end 的 data。
  */
 export interface ToolEndEventData {
+  toolCallId?: string
 
   toolName?: string
 

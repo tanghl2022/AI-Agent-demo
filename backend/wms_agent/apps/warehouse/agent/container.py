@@ -24,6 +24,7 @@ def create_agent_container(
     query_service: WmsQueryService,
     freeze_workflow_service: FreezeWorkflowService,
     checkpointer: Any,
+    analysis_tools: list | None = None,
 ) -> AgentContainer:
 
     # ① 创建 Capability
@@ -48,7 +49,7 @@ def create_agent_container(
 
     inventory_analysis_subagent = InventoryAnalysisSubAgent(
         chat_model=chat_model,
-        tools=wms_tools,
+        tools=wms_tools if analysis_tools is None else analysis_tools,
     )
 
     # ② Capability 注入 Graph

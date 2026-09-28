@@ -4,13 +4,16 @@ from wms_agent.apps.warehouse.models.query import (
     LocationQueryItem,
 )
 
-from wms_agent.apps.warehouse.agent.capabilities.stock_query import (
+from wms_agent.apps.warehouse.agent.nodes.query.query_stock import (
     create_query_stock_node,
 )
 
-from wms_agent.apps.warehouse.agent.capabilities.location_query import (
+from wms_agent.apps.warehouse.agent.nodes.query.query_location import (
     create_query_location_node,
 )
+from wms_agent.apps.warehouse.agent.capabilities.stock_query import StockQueryCapability
+from wms_agent.apps.warehouse.agent.capabilities.location_query import LocationQueryCapability
+from wms_agent.apps.warehouse.services.wms_query_service import WmsQueryService
 
 
 # ============================================================
@@ -78,7 +81,7 @@ async def test_query_stock_node_should_return_inventory_answer():
     client = FakeInventoryQueryClient()
 
     node = create_query_stock_node(
-        client
+        StockQueryCapability(WmsQueryService(client, FakeLocationQueryClient()))
     )
 
     state = {
@@ -113,7 +116,7 @@ async def test_query_location_node_should_return_locations():
     client = FakeLocationQueryClient()
 
     node = create_query_location_node(
-        client
+        LocationQueryCapability(WmsQueryService(FakeInventoryQueryClient(), client))
     )
 
     state = {

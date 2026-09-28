@@ -1,7 +1,7 @@
 import type { AgentEvent } from '../types/agent'
 import { SseParser } from '../utils/sseParser'
 
-export interface ChatStreamRequest { message: string; threadId: string }
+export interface ChatStreamRequest { message: string; conversationId: string }
 
 export async function streamAgentChat(request: ChatStreamRequest, onEvent: (event: AgentEvent) => void): Promise<void> {
   const response = await fetch('/api/agent/chat/stream', {

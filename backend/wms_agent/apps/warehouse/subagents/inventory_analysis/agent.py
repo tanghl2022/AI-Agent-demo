@@ -1,203 +1,91 @@
+"""有界只读分析循环：事实来自工具，结果附确定性的证据清单。"""
+import asyncio
+import json
+from dataclasses import dataclass
 from typing import Any
+from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
+from .prompt import INVENTORY_ANALYSIS_SYSTEM_PROMPT
+from .tool_runner import execute_tool
 
-from langchain_core.messages import (
-    AIMessage,
-    HumanMessage,
-    SystemMessage,
-    ToolMessage,
-)
 
-from .prompt import (
-    INVENTORY_ANALYSIS_SYSTEM_PROMPT,
-)
-import logging
+@dataclass(frozen=True)
+class AnalysisResult:
+    answer: str
+    status: str
+    evidence: list[dict]
 
-logger = logging.getLogger(__name__)
+
+def evidence_summary(evidence: list[dict]) -> str:
+    lines = []
+    for item in evidence:
+        data = item["data"]
+        if "locations" in data:
+            locations = data["locations"]
+            facts = "；".join(f"{loc['location_code']}：{loc.get('quantity') if loc.get('quantity') is not None else '数量未知'}"
+                             for loc in locations[:20]) or "未返回库位"
+            if len(locations) > 20:
+                facts += f"；另有 {len(locations) - 20} 个库位，完整数据见工具结果"
+        else:
+            facts = "，".join(f"{label} {data.get(key, data.get(alias, '未知'))}" for label, key, alias in [
+                ("总库存", "total_qty", "totalQty"), ("预占", "reserved_qty", "reservedQty"),
+                ("冻结", "frozen_qty", "frozenQty"), ("可用", "available_qty", "availableQty")])
+        lines.append(f"[{item['id']}] {item['tool']} · {data.get('material_code', data.get('materialCode', ''))}：{facts}"
+                     f"（{item['meta']['source']}，{item['meta']['queried_at']}）")
+    return "\n\n查询依据：\n" + "\n".join(lines) if lines else ""
+
 
 class InventoryAnalysisSubAgent:
-    """
-    库存异常分析 SubAgent。
-
-    负责：
-    1. 接收库存异常问题；
-    2. 由 LLM 自主选择查询 Tool；
-    3. 支持多轮 Tool Calling；
-    4. 根据真实查询结果生成分析结论。
-
-    注意：
-    该 Agent 只允许使用只读查询 Tool。
-    """
-
-    def __init__(
-        self,
-        *,
-        chat_model: Any,
-        tools: list,
-        max_iterations: int = 8,
-    ):
+    def __init__(self, *, chat_model: Any, tools: list, max_iterations: int = 8,
+                 max_tool_calls: int = 16, tool_timeout: float = 20, model_timeout: float = 60):
         self._tools = tools
-
-        # -----------------------------------------------------
-        # Tool Name -> Tool
-        # -----------------------------------------------------
-
-        self._tool_map = {
-            tool.name: tool
-            for tool in tools
-        }
-
-        # -----------------------------------------------------
-        # 将 Tool Schema 绑定给模型
-        # -----------------------------------------------------
-
-        self._model = chat_model.bind_tools(
-            tools
-        )
-
-        # 防止模型无限 Tool Calling
+        self._tool_map = {tool.name: tool for tool in tools}
+        self._chat_model = chat_model
         self._max_iterations = max_iterations
+        self._max_tool_calls = max_tool_calls
+        self._tool_timeout = tool_timeout
+        self._model_timeout = model_timeout
 
-    async def ainvoke(
-        self,
-        question: str,
-    ) -> str:
-        """
-        执行库存异常分析。
-        """
-        logger.info(
-            "[InventoryAnalysisSubAgent] 开始分析，question=%s",
-            question,
-        )
+    async def ainvoke(self, question: str) -> str:
+        """保留已有直接调用方的字符串返回契约。"""
+        return (await self.analyze(question)).answer
 
-        messages = [
-            SystemMessage(
-                content=INVENTORY_ANALYSIS_SYSTEM_PROMPT
-            ),
-            HumanMessage(
-                content=question
-            ),
-        ]
+    async def analyze(self, question: str) -> AnalysisResult:
+        if not question.strip():
+            return AnalysisResult("请提供需要分析的库存问题。", "CLARIFICATION_REQUIRED", [])
+        model = self._chat_model.bind_tools(self._tools)
+        messages = [SystemMessage(content=INVENTORY_ANALYSIS_SYSTEM_PROMPT), HumanMessage(content=question)]
+        evidence: list[dict] = []
+        failures: list[str] = []
+        calls = 0
 
-        # =====================================================
-        # Tool Calling Loop
-        # =====================================================
+        def finish(answer: str, status: str) -> AnalysisResult:
+            if failures:
+                answer += "\n\n未完成的查询：" + "；".join(dict.fromkeys(failures)) + "。这些数据不能用于确定结论。"
+            return AnalysisResult(answer + evidence_summary(evidence), status, evidence)
 
-        for iteration in range(
-                1,
-                self._max_iterations + 1,
-        ):
-
-            # -------------------------------------------------
-            # 1. 请求 LLM
-            # -------------------------------------------------
-            logger.info(
-                "[InventoryAnalysisSubAgent] 第 %s 轮 LLM 推理",
-                iteration,
-            )
-            response: AIMessage = (
-                await self._model.ainvoke(
-                    messages
-                )
-            )
-
+        for _ in range(self._max_iterations):
+            try:
+                async with asyncio.timeout(self._model_timeout):
+                    response = await model.ainvoke(messages)
+            except Exception:
+                return finish("分析模型调用失败；请依据已完成的查询核实，稍后重试。", "SYSTEM_FAILED")
             messages.append(response)
-
-            # -------------------------------------------------
-            # 2. 没有 Tool Call
-            #
-            # 说明模型认为已经可以回答问题。
-            # -------------------------------------------------
-
             if not response.tool_calls:
-                return str(response.content)
-
-            # -------------------------------------------------
-            # 3. 执行模型请求的 Tool
-            # -------------------------------------------------
-
-            for tool_call in response.tool_calls:
-
-                tool_name = tool_call["name"]
-
-                tool_args = tool_call["args"]
-
-                tool_call_id = tool_call["id"]
-
-                tool = self._tool_map.get(
-                    tool_name
-                )
-                logger.info(
-                    "[InventoryAnalysisSubAgent] "
-                    "Tool Start: name=%s args=%s",
-                    tool_name,
-                    tool_args,
-                )
-                # ---------------------------------------------
-                # Tool 不存在
-                # ---------------------------------------------
-
-                if tool is None:
-
-                    tool_result = {
-                        "success": False,
-                        "error": (
-                            f"Tool 不存在: "
-                            f"{tool_name}"
-                        ),
-                    }
-
+                if not evidence:
+                    return finish("尚未取得有效查询证据，无法判断库存或库位情况。请补充明确的物料编码或稍后重试。",
+                                  "INSUFFICIENT_EVIDENCE")
+                return finish(str(response.content), "PARTIAL" if failures else "SUCCESS")
+            for call in response.tool_calls:
+                if calls >= self._max_tool_calls:
+                    return finish("已达到工具调用上限，当前调查尚未完成。", "INSUFFICIENT_EVIDENCE")
+                calls += 1
+                name = call["name"]
+                result = await execute_tool(self._tool_map.get(name), name, call["args"], timeout=self._tool_timeout)
+                if result["success"]:
+                    evidence_id = f"E{len(evidence) + 1}"
+                    evidence.append({"id": evidence_id, "tool": name, "data": result["data"], "meta": result["meta"]})
+                    result = {**result, "evidence_id": evidence_id}
                 else:
-
-                    try:
-
-                        # -------------------------------------
-                        # 真正执行 Tool
-                        # -------------------------------------
-
-                        tool_result = (
-                            await tool.ainvoke(
-                                tool_args
-                            )
-                        )
-
-                    except Exception as error:
-
-                        logger.exception(
-                            "[InventoryAnalysisSubAgent] "
-                            "Tool执行异常: %s",
-                            tool_name,
-                        )
-                        # -------------------------------------
-                        # Tool 异常不能让整个 Agent 崩溃
-                        # -------------------------------------
-
-                        tool_result = {
-                            "success": False,
-                            "error": str(error),
-                        }
-
-                # ---------------------------------------------
-                # Tool Result 返回给 LLM
-                # ---------------------------------------------
-
-                messages.append(
-                    ToolMessage(
-                        content=str(
-                            tool_result
-                        ),
-                        tool_call_id=tool_call_id,
-                    )
-                )
-        logger.warning(
-            "[InventoryAnalysisSubAgent] "
-            "超过最大 Tool Calling 轮次: %s",
-            self._max_iterations,
-        )
-        # =====================================================
-        # 防止无限循环
-        # =====================================================
-
-        return (
-            "库存异常分析超过最大工具调用轮次，"
-            "当前证据不足，无法继续自动分析。"
-        )
+                    failures.append(f"{name}：{result['error']['message']}")
+                messages.append(ToolMessage(content=json.dumps(result, ensure_ascii=False), tool_call_id=call["id"]))
+        return finish("库存分析超过最大推理轮次，当前调查尚未完成。", "INSUFFICIENT_EVIDENCE")

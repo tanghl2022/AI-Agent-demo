@@ -35,7 +35,7 @@ class InventoryAnalysisNode:
     ) -> dict[str, Any]:
 
         question = state.get(
-            "question",
+            "user_message",
             ""
         )
 
@@ -45,7 +45,7 @@ class InventoryAnalysisNode:
             question,
         )
 
-        result = await self._subagent.ainvoke(
+        result = await self._subagent.analyze(
             question
         )
 
@@ -55,5 +55,8 @@ class InventoryAnalysisNode:
         )
 
         return {
-            "answer": result,
+            "answer": result.answer,
+            "status": result.status,
+            "analysis_evidence": result.evidence,
+            "active_workflow": None,
         }

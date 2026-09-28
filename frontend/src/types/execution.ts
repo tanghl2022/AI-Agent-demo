@@ -73,6 +73,7 @@ export type AgentExecutionStatus =
  * Human Approval
  */
 export interface AgentExecutionItem {
+  toolCallId?: string
 
   /**
    * 前端轨迹节点 ID。

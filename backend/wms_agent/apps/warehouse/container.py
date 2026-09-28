@@ -22,7 +22,7 @@ class WarehouseContainer:
 
 
 def create_warehouse_container(*, inventory_client: InventoryPort, location_client: LocationPort,
-    chat_model: Any, checkpointer: Any, audit_service: ApprovalAuditService) -> WarehouseContainer:
+    chat_model: Any, checkpointer: Any, audit_service: ApprovalAuditService, analysis_tools: list | None = None) -> WarehouseContainer:
 
     query_service = WmsQueryService(inventory_client, location_client)
 
@@ -32,7 +32,7 @@ def create_warehouse_container(*, inventory_client: InventoryPort, location_clie
         freeze_execution_service=execution_service, audit_service=audit_service, checkpointer=checkpointer)
 
     agent = create_agent_container(chat_model=chat_model, query_service=query_service,
-        freeze_workflow_service=workflows.freeze_workflow_service, checkpointer=checkpointer)
+        freeze_workflow_service=workflows.freeze_workflow_service, checkpointer=checkpointer, analysis_tools=analysis_tools)
 
 
     return WarehouseContainer(agent.agent_service, workflows.freeze_workflow_service,agent)

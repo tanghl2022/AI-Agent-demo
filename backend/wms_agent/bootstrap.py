@@ -8,6 +8,7 @@ from wms_agent.integrations.wms.container import create_wms_integration
 from wms_agent.apps.warehouse.container import WarehouseContainer, create_warehouse_container
 from wms_agent.apps.warehouse.audit.approval_audit_repository import ApprovalAuditRepository
 from wms_agent.apps.warehouse.audit.approval_audit_service import ApprovalAuditService
+from wms_agent.integrations.mcp.client import discover_wms_tools
 
 
 @dataclass(frozen=True, slots=True)
@@ -18,12 +19,14 @@ class ApplicationRuntime:
 @asynccontextmanager
 async def create_runtime(settings: Settings) -> AsyncIterator[ApplicationRuntime]:
     async with AsyncExitStack() as stack:
+        analysis_tools = await discover_wms_tools(settings.mcp) if settings.inventory_tool_source == "mcp" else None
         infrastructure = await stack.enter_async_context(create_infrastructure_container(settings))
         wms = await stack.enter_async_context(create_wms_integration(settings.wms))
         audit = ApprovalAuditService(ApprovalAuditRepository(infrastructure.audit_pool))
         warehouse = create_warehouse_container(
             inventory_client=wms.inventory_client, location_client=wms.location_client,
             chat_model=infrastructure.chat_model, checkpointer=infrastructure.checkpointer, audit_service=audit,
+            analysis_tools=analysis_tools,
         )
         yield ApplicationRuntime(warehouse)
 

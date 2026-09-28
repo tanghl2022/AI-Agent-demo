@@ -633,7 +633,9 @@ function handleAgentEvent(
     case 'tool_end':
 
       assistant.status =
-          'WMS Tool 调用完成'
+          (event.data as { success?: boolean }).success === false
+              ? 'WMS 查询未成功，正在核实可用证据'
+              : 'WMS Tool 调用完成'
 
       break
 
@@ -810,6 +812,12 @@ function getDoneStatusText(
 ): string {
 
   switch (status) {
+
+    case 'INSUFFICIENT_EVIDENCE':
+      return '查询证据不足'
+
+    case 'PARTIAL':
+      return '部分查询完成，仍有待核实信息'
 
     case 'WAITING_APPROVAL':
 

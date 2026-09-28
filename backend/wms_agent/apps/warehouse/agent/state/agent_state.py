@@ -79,6 +79,7 @@ class AgentState(TypedDict, total=False):
     status: str
 
     answer: str
+    analysis_evidence: list[dict]
 
     # ==============================
     # V6.4错误信息

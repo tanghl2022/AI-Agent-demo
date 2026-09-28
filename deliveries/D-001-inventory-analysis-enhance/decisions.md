@@ -5,7 +5,7 @@
 - 阶段：DESIGN
 - DEFINE：APPROVED
 - DESIGN：COMPLETE
-- Gate：等待 G1
+- Gate：G1 APPROVED（含 Error Trace ID Contract Clarification）
 - Implementation：NOT STARTED
 
 ## Design Baseline
@@ -125,6 +125,8 @@ LLM 可见输入只有 `material_code`。tenant、warehouse、user、requestId�
 
 LLM 不直接写入分类集合。Prompt 只指导 Tool 选择与停止条件，不包含阈值和业务计算。
 
+Error Trace ID 仅用于诊断关联，不是业务 Evidence，不能支持 FACT 或 POSSIBLE_CAUSE。业务 evidenceIds 必须引用同一 Result 中的 Evidence；unknowns 的 evidenceIds 如果存在也按此校验。error.traceId / errorTraceId 不参与业务 Evidence 引用完整性校验。
+
 ## D9 Analysis Status 与 PARTIAL
 
 状态只允许：
@@ -134,6 +136,8 @@ LLM 不直接写入分类集合。Prompt 只指导 Tool 选择与停止条件，
 - `FAILED`：没有任何可用 Evidence，或权限失败，或可信上下文缺失且无法继续。
 
 `PARTIAL` 必须列出 `successfulScopes`、`failedScopes`、`limitations`。失败维度不得用于确认或排除原因。任何 `FORBIDDEN` 结果整体 fail closed，不返回已收集的受限业务数据。
+
+Request Context 尚未建立且未进入 Evidence Collection 时，允许按 contracts.md 第 3 节返回 FAILED、空 evidences 和独立 error.traceId，不伪造业务 Evidence 或身份字段；这是已批准的契约澄清，不改变 Scope、Behavior 或 Architecture。
 
 ## D10 Evidence Conflict
 
@@ -185,7 +189,14 @@ user/tenant 缺失时要求重新认证或选择受信任 Session，不接受自
 
 ## D14 结构化结果与自然语言回答
 
-`InventoryAnalysisResult` 是唯一事实来源。`InventoryAnalysisAnswerRenderer` 从结构化结果确定性生成自然语言回答，LLM 不再独立生成第二套结论。
+`InventoryAnalysisResult` 继续作为唯一事实来源，由确定性 `InventoryAnalysisResultAssembler` 生成。`InventoryAnalysisAnswerRenderer` 抽象为受约束的渲染接口，只读取该 Result，返回自然语言 answer，不修改任何结构化字段。
+
+- `DeterministicAnswerRenderer`：使用确定性模板，用于测试、CI 和降级；
+- `LlmAnswerRenderer`：允许生产环境进行自然语言组织，但内容只能基于该 Result，不得新增 Fact、Cause、Classification、Unknown，也不得改变任何结构化结论。
+
+LLM Renderer 只负责“怎么表达”，不负责“事实和结论是什么”。它不得重新分析 Evidence、调用 Tool 获取补充事实、重算数量或改判分类；不得省略会改变结论含义的未知项、限制或不确定性。两种实现遵循 contracts.md 第 15 节同一渲染契约，切换实现不改变结构化结果。
+
+LLM 渲染失败、超时或输出违反渲染契约时，丢弃该输出并使用 `DeterministicAnswerRenderer` 渲染同一 Result；不得为修复文案而改写 Result、追加 UNKNOWN 或改变分析 status。
 
 自然语言固定包含：调查对象、事实、可能原因、未知项、限制；无建议时不显示建议段。结构化结果与 answer 同时返回，旧客户端仍可只消费 `answer`。
 
@@ -223,5 +234,5 @@ V1 使用 Observability Port 输出结构化日志/Trace，不新增 Agent 直�
 
 ## G1 Decision
 
-在三个 Artifact 完成一致性检查后，本设计可提交 G1；G1 前不得实施任何 Task。
+G1 已获用户批准，包括 D14 Renderer Minor Design Change 和 Error Trace ID Contract Clarification。InventoryAnalysisResult 唯一事实来源、已批准 Behavior、Architecture 和 V1 Scope 保持不变；实施前发现其他契约冲突时仍须 BLOCKED，不得自行改变批准基线。
 

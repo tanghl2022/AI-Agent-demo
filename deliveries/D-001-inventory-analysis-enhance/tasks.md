@@ -4,7 +4,7 @@
 
 **Goal:** 实现只针对 `AVAILABLE_STOCK_LOW`、通过正式 MCP 链路收集三类 Evidence、同时返回结构化结果与自然语言解释的只读原因分析能力。
 
-**Architecture:** 复用现有 Main Graph、`INVENTORY_ANALYSIS`、InventoryAnalysisNode 和 InventoryAnalysisSubAgent。SubAgent 只选择三个 READ Tool；MCP Server 调用 Java WMS；确定性 Result Assembler 将 Evidence 映射为 FACT、POSSIBLE_CAUSE、UNKNOWN，Renderer 从结构化结果生成 answer。
+**Architecture:** 复用现有 Main Graph、`INVENTORY_ANALYSIS`、InventoryAnalysisNode 和 InventoryAnalysisSubAgent。SubAgent 只选择三个 READ Tool；MCP Server 调用 Java WMS；确定性 Result Assembler 将 Evidence 映射为 FACT、POSSIBLE_CAUSE、UNKNOWN。InventoryAnalysisResult 是唯一事实来源，受约束的 Renderer 接口提供 DeterministicAnswerRenderer（测试、CI、降级）和 LlmAnswerRenderer（生产环境可选）两种实现，只生成表达，不生成或改变结构化结论。
 
 **Tech Stack:** Python、LangGraph、LangChain Tool Calling、MCP Python SDK、FastAPI、httpx、Pydantic 2、pytest；外部 Java WMS REST API。
 
@@ -53,16 +53,18 @@
 - INVENTORY_ANALYSIS 缺少 materialCode 时进入 clarification；
 - user/tenant 缺失时要求恢复可信 Session；warehouse 缺失时进入受控补全；
 - 非分析流程行为不变。
+- Context 建立前且尚未进入 Evidence Collection 的失败使用 FAILED、空 evidences、error.code=CONTEXT_REQUIRED 和独立 error.traceId，不伪造身份或 Evidence。
 
 **Test / Evaluation Requirements:**
 
 - Unit Test：RequestContext 校验、State 序列化、参数补问、Node 问题传递；
 - Regression：context merge、QUERY_STOCK、QUERY_LOCATION、FREEZE_INVENTORY；
 - Critical：自然语言中的 tenant/user 不得覆盖可信上下文。
+- Unit Test：Context 建立前失败不调用 Evidence Tool，诊断 traceId 不进入 evidenceIds。
 
 ## T2 — Evidence Model、Result Assembler 与 Renderer
 
-**Goal:** 实现三类 Evidence、分类项、冲突检测、Result 状态聚合和确定性 answer 渲染。
+**Goal:** 实现三类 Evidence、分类项、冲突检测、Result 状态聚合，以及受约束的 answer 渲染接口和两种实现。
 
 **修改范围:**
 
@@ -81,12 +83,18 @@
 - Evidence 缺失、失败、冲突映射为 UNKNOWN；
 - SUCCESS/PARTIAL/FAILED 按 contracts.md 聚合；
 - answer 完全从结构化 Result 渲染且无数值置信度。
+- 提供 InventoryAnalysisAnswerRenderer 接口及 DeterministicAnswerRenderer、LlmAnswerRenderer；两者遵循 contracts.md 第 15 节，Result 中已有 answer 不作为输入事实；
+- LLM 只调整表达，不新增 Fact、Cause、Classification、Unknown，不改变结构化结论，不重算数量、不重新分析 Evidence、不调用 Tool；
+- LLM 失败、超时或输出违反契约时丢弃输出，降级到同一 Result 的确定性渲染；不修改结构化字段、追加 UNKNOWN 或改变 status。
 
 **Test / Evaluation Requirements:**
 
 - Unit Test：所有 enum、跨字段校验、PARTIAL、全失败、NO_DATA、VALUE_CONFLICT、TEMPORAL_CONFLICT；
-- Property/parameterized tests：每个分类项引用存在且 analysisId 一致；
+- Property/parameterized tests：facts/possibleCauses 的非空 evidenceIds 与 unknowns 中存在的 evidenceIds 均引用同一 Result 的 Evidence，analysisId 一致；
+- Unit Test：error.traceId / errorTraceId 不参与业务引用完整性校验；上下文建立前空 evidences 失败形态合法；将诊断 Trace 混入业务 evidenceIds 或用于支持 FACT/POSSIBLE_CAUSE 必须拒绝；
 - Critical：POSSIBLE_CAUSE 文案不得出现“已确认根因”。
+- Unit Test：确定性渲染可重复；两种实现输入的结构化字段在渲染前后不变；使用 Fake Model 覆盖正常改写、失败、超时和违规输出降级；
+- Renderer 契约用例：新增事实/原因/分类/未知项、修改数量或分类、遗漏 UNKNOWN/limitations、把可能原因表述为确认结论均不符合契约。
 
 ## T3 — Java WMS V1 查询能力
 
@@ -168,6 +176,7 @@
 - 写 Tool、未知 Tool、缺少 Tool 时启动失败；
 - MCP 连接由 Runtime 生命周期管理并正确关闭；
 - 现有固定查询 Capability 保持不变。
+- 在组合根配置 Renderer 实现：测试/CI 使用 DeterministicAnswerRenderer，生产可选择 LlmAnswerRenderer，并保留确定性降级路径。
 
 **Test / Evaluation Requirements:**
 
@@ -196,6 +205,7 @@
 - 同一 Tool 一次分析最多真实查询一次；
 - 8 轮、30 秒、熔断均能安全降级；
 - Result 由 Assembler 生成，answer 由 Renderer 生成；
+- Renderer 仅接收 Result 作为内容来源，不接收原始用户消息或历史作为补充事实，也不绑定查询 Tool；渲染输出不得回流为分析结论；
 - 不输出 LLM 数值置信度。
 
 **Test / Evaluation Requirements:**
@@ -224,6 +234,7 @@
 - SSE done 事件可携带 analysisResult；
 - 旧客户端继续只依赖 answer；
 - 结构化结果与 answer 一致。
+- 两种 Renderer 及 LLM 降级路径均保持 HTTP/SSE 结构化结论不变；不得向客户端发布已判定违反渲染契约的 LLM 文案。
 
 **Test / Evaluation Requirements:**
 
@@ -275,6 +286,7 @@
 - Agent cases 覆盖三类 Evidence、SUCCESS/PARTIAL/FAILED、NO_DATA、冲突、权限、timeout；
 - Critical cases 验证无 Evidence 不确认根因、无数值置信度、无写 Tool、无权限泄漏；
 - Evaluation 输出机器可读报告和失败 case ID。
+- Renderer Evaluation 对照同一 Result 检查事实、原因、分类、未知项和限制的一致性，覆盖 LLM 新增内容、改写结论、遗漏限制及降级路径。
 
 **Test / Evaluation Requirements:**
 
@@ -282,6 +294,7 @@
 - Agent Evaluation PASS；
 - Critical Evaluation Cases PASS；
 - 固定随机性或使用可重复 Fake Model 进行 CI，真实模型评测作为独立环境验证。
+- CI 的正常 answer 路径使用 DeterministicAnswerRenderer，另以 Fake Model 验证 LlmAnswerRenderer 契约及降级；生产启用 LlmAnswerRenderer 前，真实模型必须通过对应 Agent/Critical Evaluation。
 
 ## T10 — End-to-End、Architecture Verification 与 G2 证据
 
@@ -350,5 +363,6 @@ T3 Java WMS ──> T4 MCP Server┴──────────────�
 - [ ] Request/Session Context 的安全来源与 MCP 元数据传递方式可实现。
 - [ ] 三个 READ Tool 白名单已确认。
 - [ ] tasks.md 覆盖全部 Definition of Done。
+- [ ] D14、contracts.md 第 15 节与 T2/T5/T6/T7/T9 对两种 Renderer、唯一事实来源和降级边界的定义一致。
 - [ ] 当前没有业务代码、测试代码或 Evaluation 代码改动。
 
